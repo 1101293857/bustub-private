@@ -17,6 +17,7 @@
 #include <queue>
 #include <shared_mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "common/config.h"
@@ -30,6 +31,7 @@
 
 namespace bustub {
 
+enum class Operation { Read, Insert, Remove };
 struct PrintableBPlusTree;
 
 /**
@@ -78,12 +80,28 @@ class BPlusTree {
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *txn);
 
+  void GetSiblings(page_id_t page_id, page_id_t &left_sibling_id, page_id_t &right_sibling_id, Transaction *transaction,
+                   std::deque<page_id_t> &re_parent_page_id);
+
+  void HandleUnderflow(page_id_t page_id, Transaction *tranction, std::deque<page_id_t> &re_parent_page_id);
+  // 获得该键值所在的叶节点
+  auto GetLeafPage(const KeyType &key, std::deque<Page *> &transaction, Operation op,
+                   std::deque<page_id_t> &parent_page_id) -> BasicPageGuard;
   // Return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *txn = nullptr) -> bool;
 
+  void MergePage(page_id_t left_page_id, page_id_t right_page_id, InternalPage *parent_page, Transaction *transaction,
+                 bool flag);
+
+  auto IsPageSafe(BPlusTreePage *tree_page, Operation op, bool IsRootPage) -> bool;
+  // void ReleaseWlatches(Transaction *transaction);
+  void ReleasePages(std::deque<Page *> &transaction);
+  void ReleaseOnePages(std::deque<Page *> &transaction);
+  // void ReleaseWpages(std::deque<Page *> &depage);
+  auto TryBorrow(page_id_t page_id, page_id_t sibling_page_id, InternalPage *parent_page, bool sibling_at_left) -> bool;
   // Return the page id of the root node
   auto GetRootPageId() -> page_id_t;
-
+  auto SetRootPageId() -> void;
   // Index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
 
@@ -135,9 +153,15 @@ class BPlusTree {
   BufferPoolManager *bpm_;
   KeyComparator comparator_;
   std::vector<std::string> log;  // NOLINT
+  // std::deque<page_id_t> parent_page_id_;
+  // std::unordered_map<page_id_t, page_id_t> parent_;
   int leaf_max_size_;
   int internal_max_size_;
+  // INDEXITERATOR_TYPE end;
   page_id_t header_page_id_;
+  std::mutex latch_;
+  std::mutex latch_1_;
+  ReaderWriterLatch root_latch_;
 };
 
 /**

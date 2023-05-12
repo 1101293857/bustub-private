@@ -23,29 +23,90 @@
 namespace bustub {
 
 // NOLINTNEXTLINE
-TEST(PageGuardTest, DISABLED_SampleTest) {
+TEST(PageGuardTest, SampleTest) {
+  //  const std::string db_name = "test.db";
+  // const size_t buffer_pool_size = 5;
+  // const size_t k = 2;
+
+  // auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  // auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  // page_id_t page_id_temp;
+  // auto *page0 = bpm->NewPage(&page_id_temp);
+
+  // // test ~ReadPageGuard()
+  // {
+  //   auto reader_guard = bpm->FetchPageRead(page_id_temp);
+  //   EXPECT_EQ(2, page0->GetPinCount());
+  // }
+  // EXPECT_EQ(1, page0->GetPinCount());
+
+  // // test ReadPageGuard(ReadPageGuard &&that)
+  // {
+  //   auto reader_guard = bpm->FetchPageRead(page_id_temp);
+  //   auto reader_guard_2 = ReadPageGuard(std::move(reader_guard));
+  //   EXPECT_EQ(2, page0->GetPinCount());
+  // }
+  // EXPECT_EQ(1, page0->GetPinCount());
+
+  // // test ReadPageGuard::operator=(ReadPageGuard &&that)
+  // {
+  //   auto reader_guard_1 = bpm->FetchPageRead(page_id_temp);
+  //   // auto reader_guard_2 = bpm->FetchPageRead(page_id_temp);
+  //   // EXPECT_EQ(3, page0->GetPinCount());
+  //   auto reader_guard_3 = std::move(reader_guard_1);
+
+  //   // EXPECT_EQ(2, page0->GetPinCount());
+  // }
+  // auto reader_guard_2 = bpm->FetchPageWrite(page_id_temp);
+  // EXPECT_EQ(1, page0->GetPinCount());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  // disk_manager->ShutDown();
+  // }
   const std::string db_name = "test.db";
-  const size_t buffer_pool_size = 5;
+  const size_t buffer_pool_size = 10;
   const size_t k = 2;
 
   auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
 
   page_id_t page_id_temp;
+  auto NewPage = bpm->NewPageGuarded(&page_id_temp);
+  NewPage.Drop();
+  NewPage.Drop();
+  auto NewPage1 = bpm->FetchPageBasic(0);
+  NewPage1.Drop();
+  { auto NewPageRead = bpm->FetchPageRead(0); }
+
+  // auto NewPageWrite = bpm->FetchPageWrite(0);
+  // auto NewPageWrite1 = bpm->FetchPageWrite(0);
+
   auto *page0 = bpm->NewPage(&page_id_temp);
+  auto *page1 = bpm->NewPage(&page_id_temp);
+  // auto *page2 = bpm->NewPage(&page_id_temp);
 
-  auto guarded_page = BasicPageGuard(bpm.get(), page0);
+  {
+    // auto guarded_page = BasicPageGuard(bpm.get(), page0);
 
-  EXPECT_EQ(page0->GetData(), guarded_page.GetData());
-  EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
-  EXPECT_EQ(1, page0->GetPinCount());
+    // EXPECT_EQ(page0->GetData(), guarded_page.GetData());
+    // EXPECT_EQ(page0->GetPageId(), guarded_page.PageId());
+    // EXPECT_EQ(1, page0->GetPinCount());
+    // auto readPage = ReadPageGuard(bpm.get(), page1);
+    auto writePage1 = WritePageGuard(bpm.get(), page1);
+    auto writePage2 = WritePageGuard(bpm.get(), page1);
+    // guarded_page.Drop();
+    // guarded_page.Drop();
+  }
 
-  guarded_page.Drop();
+  // auto readPage = ReadPageGuard(bpm.get(), page1);
 
-  EXPECT_EQ(0, page0->GetPinCount());
+  auto writePage = WritePageGuard(bpm.get(), page1);
+
+  // writePage.Drop();
+  // EXPECT_EQ(0, page0->GetPinCount());
 
   // Shutdown the disk manager and remove the temporary file we created.
   disk_manager->ShutDown();
 }
-
 }  // namespace bustub

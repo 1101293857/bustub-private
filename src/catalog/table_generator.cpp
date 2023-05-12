@@ -169,7 +169,6 @@ void TableGenerator::GenerateTestTables() {
       //  0,
       //  {{"colA", TypeId::BIGINT, false, Dist::Serial, 0, 0}, {"colB", TypeId::INTEGER, false, Dist::Uniform, 0, 9}}},
   };
-
   for (auto &table_meta : insert_meta) {
     // Create Schema
     std::vector<Column> cols{};
@@ -182,7 +181,9 @@ void TableGenerator::GenerateTestTables() {
       }
     }
     Schema schema(cols);
+
     auto info = exec_ctx_->GetCatalog()->CreateTable(exec_ctx_->GetTransaction(), table_meta.name_, schema);
+
     FillTable(info, &table_meta);
   }
 }

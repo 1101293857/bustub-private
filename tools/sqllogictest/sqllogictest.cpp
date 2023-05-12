@@ -69,7 +69,7 @@ auto ProcessExtraOptions(const std::string &sql, bustub::BustubInstance &instanc
       std::stringstream result;
       auto writer = bustub::SimpleStreamWriter(result);
       instance.ExecuteSql("explain " + sql, writer);
-
+      std::cout << result.str() << std::endl;
       if (opt == "ensure:index_scan") {
         if (!bustub::StringUtil::Contains(result.str(), "IndexScan")) {
           fmt::print("IndexScan not found\n");
@@ -175,7 +175,6 @@ auto main(int argc, char **argv) -> int {  // NOLINT
   program.add_argument("--verbose").help("increase output verbosity").default_value(false).implicit_value(true);
   program.add_argument("-d", "--diff").help("write diff file").default_value(false).implicit_value(true);
   program.add_argument("--in-memory").help("use in-memory backend").default_value(false).implicit_value(true);
-
   try {
     program.parse_args(argc, argv);
   } catch (const std::runtime_error &err) {
@@ -281,7 +280,9 @@ auto main(int argc, char **argv) -> int {  // NOLINT
           }
 
           std::stringstream result;
+          fmt::print("--- EXPECTED RESULT ---\n{}\n", query.expected_result_);
           auto writer = bustub::SimpleStreamWriter(result, true, " ");
+
           bustub->ExecuteSql(query.sql_, writer, check_options);
           if (verbose) {
             fmt::print("--- YOUR RESULT ---\n{}\n", result.str());

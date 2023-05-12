@@ -4,10 +4,43 @@ namespace bustub {
 
 SortExecutor::SortExecutor(ExecutorContext *exec_ctx, const SortPlanNode *plan,
                            std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void SortExecutor::Init() { throw NotImplementedException("SortExecutor is not implemented"); }
+void SortExecutor::Init() {
+  Tuple tuple;
+  RID rid;
+  child_executor_->Init();
+  sorted_tuples_.clear();
+  while (child_executor_->Next(&tuple, &rid)) {
+    sorted_tuples_.push_back(tuple);
+  }
+  std::sort(sorted_tuples_.begin(), sorted_tuples_.end(), [this](const Tuple &a, const Tuple &b) {
+    for (auto [order_by_type, expr] : plan_->GetOrderBy()) {
+      bool default_order_by = (order_by_type == OrderByType::DEFAULT || order_by_type == OrderByType::ASC);
+      // Value aa = expr->Evaluate(&a, child_executor_->GetOutputSchema());
+      // Value bb = expr->Evaluate(&b, child_executor_->GetOutputSchema());
 
-auto SortExecutor::Next(Tuple *tuple, RID *rid) -> bool { return false; }
+      if (expr->Evaluate(&a, child_executor_->GetOutputSchema())
+              .CompareLessThan(expr->Evaluate(&b, child_executor_->GetOutputSchema())) == CmpBool::CmpTrue) {
+        return default_order_by;
+      }
+      if (expr->Evaluate(&a, child_executor_->GetOutputSchema())
+              .CompareGreaterThan(expr->Evaluate(&b, child_executor_->GetOutputSchema())) == CmpBool::CmpTrue) {
+        return !default_order_by;
+      }
+    }
+    return true;
+  });
+  iterator_ = sorted_tuples_.begin();
+}
+
+auto SortExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+  if (iterator_ != sorted_tuples_.end()) {
+    *tuple = *iterator_;
+    iterator_++;
+    return true;
+  }
+  return false;
+}
 
 }  // namespace bustub

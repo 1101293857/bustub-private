@@ -14,8 +14,8 @@
 #include <utility>
 #include <vector>
 
+// #include "storage/index/index_iterator.h"
 #include "storage/page/b_plus_tree_page.h"
-
 namespace bustub {
 
 #define B_PLUS_TREE_LEAF_PAGE_TYPE BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>
@@ -58,7 +58,17 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   auto GetNextPageId() const -> page_id_t;
   void SetNextPageId(page_id_t next_page_id);
   auto KeyAt(int index) const -> KeyType;
+  auto Find(const KeyType &Key, const KeyComparator &keyComparator, ValueType &value) -> bool;
+  auto ValueAt(int index) const -> ValueType;
+  void SetKeyValueAt(int index, const KeyType &key, const ValueType &value);
+  auto GetIndex(int index) -> MappingType &;
+  // auto LeafBeginKey(const KeyType &key,const KeyComparator &comp) -> INDEXITERATOR_TYPE;
+  void Insert(const KeyType &key, const ValueType &value, const KeyComparator &comp);
+  auto Remove(const KeyType &key, const KeyComparator &comp) -> bool;
+  // auto GetIndexEnd(int index) -> INDEXITERATOR_TYPE;
+  void RemoveAt(int index);
 
+  void MoveData(B_PLUS_TREE_LEAF_PAGE_TYPE *new_page, int count);
   /**
    * @brief for test only return a string representing all keys in
    * this leaf page formatted as "(key1,key2,key3,...)"

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-
+#include <memory>
 #include <vector>
 
 #include "execution/executor_context.h"
@@ -47,8 +47,12 @@ class SeqScanExecutor : public AbstractExecutor {
   /** @return The output schema for the sequential scan */
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
- private:
+ public:
   /** The sequential scan plan node to be executed */
   const SeqScanPlanNode *plan_;
+  std::unique_ptr<TableIterator> iterator_;
+  // const SeqScanPlanNode *plan_;
+  // TableHeap *table_heap_;
+  // std::unique_ptr<TableIterator> iterator_;
 };
 }  // namespace bustub

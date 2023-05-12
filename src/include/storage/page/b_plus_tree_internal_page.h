@@ -52,7 +52,11 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    * @return Key at index
    */
   auto KeyAt(int index) const -> KeyType;
-
+  void SetKeyValueAt(int index, const KeyType &key, const ValueType &value);
+  void RemoveAt(int index);
+  void Insert(const KeyType &key, const ValueType &value, const KeyComparator &comp);
+  auto Find(const KeyType &Key, const KeyComparator &keyComparator) const -> ValueType;
+  void MoveData(B_PLUS_TREE_INTERNAL_PAGE_TYPE *new_page, int count);
   /**
    *
    * @param index The index of the key to set. Index must be non-zero.
@@ -60,12 +64,14 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    */
   void SetKeyAt(int index, const KeyType &key);
 
+  auto FindValue(const ValueType &value) -> int;
   /**
    *
    * @param value the value to search for
    */
   auto ValueIndex(const ValueType &value) const -> int;
 
+  void SetValueAt(int index, const ValueType &value);
   /**
    *
    * @param index the index

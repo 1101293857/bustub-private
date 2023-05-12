@@ -21,7 +21,7 @@
       << "Test Failed Due to Time Out";
 
 namespace bustub {
-TEST(LockManagerDeadlockDetectionTest, DISABLED_EdgeTest) {
+TEST(LockManagerDeadlockDetectionTest, EdgeTest) {
   LockManager lock_mgr{};
 
   const int num_nodes = 100;
@@ -63,7 +63,7 @@ TEST(LockManagerDeadlockDetectionTest, DISABLED_EdgeTest) {
   }
 }
 
-TEST(LockManagerDeadlockDetectionTest, DISABLED_BasicDeadlockDetectionTest) {
+TEST(LockManagerDeadlockDetectionTest, BasicDeadlockDetectionTest) {
   LockManager lock_mgr{};
   TransactionManager txn_mgr{&lock_mgr};
 
@@ -115,9 +115,11 @@ TEST(LockManagerDeadlockDetectionTest, DISABLED_BasicDeadlockDetectionTest) {
 
   // Sleep for enough time to break cycle
   std::this_thread::sleep_for(cycle_detection_interval * 2);
-
+  std::cout << 1 << std::endl;
   t0.join();
+  std::cout << 2 << std::endl;
   t1.join();
+  std::cout << 3 << std::endl;
 
   delete txn0;
   delete txn1;

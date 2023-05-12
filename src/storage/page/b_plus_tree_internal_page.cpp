@@ -24,7 +24,11 @@ namespace bustub {
  * Including set page type, set current size, and set max page size
  */
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {
+  SetMaxSize(max_size);
+  SetPageType(IndexPageType::INTERNAL_PAGE);
+  SetSize(0);
+}
 /*
  * Helper method to get/set the key associated with input "index"(a.k.a
  * array offset)
@@ -32,20 +36,92 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {}
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType {
   // replace with your own code
-  KeyType key{};
-  return key;
+  return array_[index].first;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) {}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) { array_[index].first = key; }
 
 /*
  * Helper method to get the value associated with input "index"(a.k.a array
  * offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return 0; }
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return array_[index].second; }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyValueAt(int index, const KeyType &key, const ValueType &value) {
+  array_[index].first = key;
+  array_[index].second = value;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const ValueType &value) -> int {
+  // std::cout << GetSize() << std::endl;
+  for (int i = 0; i < GetSize(); i++) {
+    // std::cout << "key  " << array_[i].first << "value  " << array_[i].second << "  " << value << "   " << i
+    //           << std::endl;
+    if (array_[i].second == value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index, const ValueType &value) { array_[index].second = value; }
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveData(B_PLUS_TREE_INTERNAL_PAGE_TYPE *new_page, int count) {
+  int size = GetSize();
+  int start = size - count;
+  for (int i = start, j = 1; i < size; i++, j++) {
+    new_page->SetKeyValueAt(j, array_[i].first, array_[i].second);
+  }
+  new_page->IncreaseSize(count + 1);
+  SetSize(size - count);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAt(int index) {
+  for (int i = index; i < GetSize() - 1; i++) {
+    array_[i] = array_[i + 1];
+  }
+  IncreaseSize(-1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, const KeyComparator &comp) {
+  int size = GetSize();
+
+  int ins_at = 1;
+  while (ins_at < size && comp(array_[ins_at].first, key) < 0) {
+    ins_at++;
+  }
+
+  for (int i = size; i > ins_at; i--) {
+    array_[i] = array_[i - 1];
+  }
+  IncreaseSize(1);
+  SetKeyValueAt(ins_at, key, value);
+}
+
+// INDEX_TEMPLATE_ARGUMENTS
+// auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::Find(const KeyType &Key, const KeyComparator &keyComparator) const -> ValueType{
+//   auto result = std::lower_bound(array_ + 1,array_ + GetSize(), Key, [&keyComparator](const MappingType
+//   &pair_,KeyType key){
+//     return keyComparator(pair_.first,key)<0;
+//   });
+
+//   if(result==array_+GetSize()){
+//     return ValueAt(GetSize()-1);
+//   }
+//   if(keyComparator(result->first,key)==0){
+//     return result.second;
+//   }
+//   return std::prev(result)->second;
+
+// }
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
 template class BPlusTreeInternalPage<GenericKey<8>, page_id_t, GenericComparator<8>>;

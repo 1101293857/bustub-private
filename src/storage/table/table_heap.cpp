@@ -54,8 +54,9 @@ auto TableHeap::InsertTuple(const TupleMeta &meta, const Tuple &tuple) -> std::o
     // Don't do lock crabbing here: TSAN reports, also as last_page_id_ is only updated
     // later, this page won't be accessed.
     page->SetNextPageId(next_page_id);
+    // std::cout << "page Drop" << std::endl;
     page_guard.Drop();
-
+    // std::cout << next_page_id << "Wlock" << std::endl;
     npg->WLatch();
     auto next_page_guard = WritePageGuard{bpm_, npg};
     auto next_page = next_page_guard.AsMut<TablePage>();

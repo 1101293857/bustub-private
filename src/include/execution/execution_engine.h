@@ -82,6 +82,7 @@ class ExecutionEngine {
     for (const auto &[left_executor, right_executor] : exec_ctx->GetNLJCheckExecutorSet()) {
       auto casted_left_executor = dynamic_cast<const InitCheckExecutor *>(left_executor);
       auto casted_right_executor = dynamic_cast<const InitCheckExecutor *>(right_executor);
+      std::cout << casted_left_executor->GetNextCount() << "  " << casted_right_executor->GetInitCount() << std::endl;
       BUSTUB_ASSERT(casted_left_executor->GetNextCount() == casted_right_executor->GetInitCount(),
                     "nlj check failed, are you initialising the right executor correctly?");
     }

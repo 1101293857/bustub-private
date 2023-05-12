@@ -17,11 +17,11 @@
 #include <list>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
 #include "common/config.h"
 #include "common/rid.h"
 #include "concurrency/transaction.h"
@@ -64,27 +64,42 @@ class LockManager {
   class LockRequestQueue {
    public:
     /** List of lock requests for the same resource (table or row) */
-    std::list<LockRequest *> request_queue_;
+    std::list<std::shared_ptr<LockRequest>> request_queue_;
     /** For notifying blocked transactions on this rid */
     std::condition_variable cv_;
     /** txn_id of an upgrading transaction (if any) */
     txn_id_t upgrading_ = INVALID_TXN_ID;
     /** coordination */
     std::mutex latch_;
+    auto GrantLockForRow(Transaction *txn, LockManager::LockMode lock_mode) -> bool;
+    auto GrantLockForTable(Transaction *txn, LockManager::LockMode lock_mode) -> bool;
   };
 
   /**
    * Creates a new lock manager configured for the deadlock detection policy.
    */
-  LockManager() {
+  // LockManager() {
+  //   safe_set_.clear();              
+  //   txn_set_.clear();            
+  //   active_set_.clear(); 
+
+  //   map_txn_rid_.clear();
+  //   map_txn_oid_.clear();
+  //   enable_cycle_detection_ = true;
+  //   cycle_detection_thread_ = new std::thread(&LockManager::RunCycleDetection, this);
+  // }
+  LockManager() = default;
+  void StartDeadlockDetection() {
+    BUSTUB_ENSURE(txn_manager_ != nullptr, "txn_manager_ is not set.")
     enable_cycle_detection_ = true;
     cycle_detection_thread_ = new std::thread(&LockManager::RunCycleDetection, this);
   }
-
   ~LockManager() {
     enable_cycle_detection_ = false;
-    cycle_detection_thread_->join();
-    delete cycle_detection_thread_;
+    if (cycle_detection_thread_ != nullptr) {
+      cycle_detection_thread_->join();
+      delete cycle_detection_thread_;
+    }
   }
 
   /**
@@ -202,7 +217,6 @@ class LockManager {
    *    After a resource is unlocked, lock manager should update the transaction's lock sets
    *    appropriately (check transaction.h)
    */
-
   /**
    * Acquire a lock on table_oid_t in the given lock_mode.
    * If the transaction already holds a lock on the table, upgrade the lock
@@ -297,7 +311,58 @@ class LockManager {
    * Runs cycle detection in the background.
    */
   auto RunCycleDetection() -> void;
+  auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,
+                 const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool;
 
+  auto InsertOrDeleteTableLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool insert)
+      -> void;
+
+  auto InsertOrDeleteRowLockSet(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool insert)
+      -> void;
+
+  auto InsertRowLockSet(const std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        const table_oid_t &oid, const RID &rid) -> void {
+    auto row_lock_set = lock_set->find(oid);
+    if (row_lock_set == lock_set->end()) {
+      lock_set->emplace(oid, std::unordered_set<RID>{});
+      row_lock_set = lock_set->find(oid);
+    }
+    row_lock_set->second.emplace(rid);
+  }
+
+  auto DeleteRowLockSet(const std::shared_ptr<std::unordered_map<table_oid_t, std::unordered_set<RID>>> &lock_set,
+                        const table_oid_t &oid, const RID &rid) -> void {
+    auto row_lock_set = lock_set->find(oid);
+    if (row_lock_set == lock_set->end()) {
+      return;
+    }
+    row_lock_set->second.erase(rid);
+  }
+  // 返回false表示该点不在死锁环上
+  auto Dfs(txn_id_t txn_id) -> bool {
+    if (safe_set_.find(txn_id) != safe_set_.end()) {
+      return false;
+    }
+    active_set_.insert(txn_id);
+
+    std::vector<txn_id_t> &next_node_vector = waits_for_[txn_id];
+    std::sort(next_node_vector.begin(), next_node_vector.end());
+    for (txn_id_t const next_node : next_node_vector) {
+      if (active_set_.find(next_node) != active_set_.end()) {
+        return true;
+      }
+      if (Dfs(next_node)) {
+        return true;
+      }
+    }
+
+    active_set_.erase(txn_id);
+    safe_set_.insert(txn_id);
+    return false;
+  }
+
+  auto DeleteNode(txn_id_t txn_id) -> void;
+  TransactionManager *txn_manager_;
  private:
   /** Fall 2022 */
   /** Structure that holds lock requests for a given table oid */
@@ -315,6 +380,40 @@ class LockManager {
   /** Waits-for graph representation. */
   std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
+  std::set<txn_id_t> safe_set_;              // 经过dfs算法确认安全的点集合
+  std::set<txn_id_t> txn_set_;               // 所有事务点的集合
+  std::unordered_set<txn_id_t> active_set_;  // 用来临时记录dfs中已经扫描过的点
+
+  std::unordered_map<txn_id_t, RID> map_txn_rid_;
+  std::unordered_map<txn_id_t, table_oid_t> map_txn_oid_;
 };
 
 }  // namespace bustub
+
+
+template <>
+struct fmt::formatter<bustub::LockManager::LockMode> : formatter<std::string_view> {
+  // parse is inherited from formatter<string_view>.
+  template <typename FormatContext>
+  auto format(bustub::LockManager::LockMode x, FormatContext &ctx) const {
+    string_view name = "unknown";
+    switch (x) {
+      case bustub::LockManager::LockMode::EXCLUSIVE:
+        name = "EXCLUSIVE";
+        break;
+      case bustub::LockManager::LockMode::INTENTION_EXCLUSIVE:
+        name = "INTENTION_EXCLUSIVE";
+        break;
+      case bustub::LockManager::LockMode::SHARED:
+        name = "SHARED";
+        break;
+      case bustub::LockManager::LockMode::INTENTION_SHARED:
+        name = "INTENTION_SHARED";
+        break;
+      case bustub::LockManager::LockMode::SHARED_INTENTION_EXCLUSIVE:
+        name = "SHARED_INTENTION_EXCLUSIVE";
+        break;
+    }
+    return formatter<string_view>::format(name, ctx);
+  }
+};

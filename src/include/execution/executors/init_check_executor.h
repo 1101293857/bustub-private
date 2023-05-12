@@ -47,7 +47,10 @@ class InitCheckExecutor : public AbstractExecutor {
   auto Next(Tuple *tuple, RID *rid) -> bool override;
 
   /** @return The output schema for the child executor */
-  auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
+  auto GetOutputSchema() const -> const Schema & override {
+    // return plan_->OutputSchema();
+    return child_executor_->GetOutputSchema();
+  };
 
   /** @return The number of inits */
   auto GetInitCount() const -> std::size_t { return n_init_; };
